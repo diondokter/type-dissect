@@ -1,6 +1,6 @@
 use build_html::Html;
 use clap::Parser;
-use comfy_table::{Cell, Color, Table, Width};
+use comfy_table::{Cell, Color, Table};
 use gimli::{AttributeValue, DebuggingInformationEntry, Dwarf, EndianSlice, Reader, UnitHeader};
 use object::{Object, ObjectSection};
 use std::{
@@ -18,6 +18,7 @@ struct Args {
     exe_path: PathBuf,
 }
 
+#[allow(dead_code)]
 struct TestThing {
     a: u8,
     b: u16,
@@ -25,7 +26,7 @@ struct TestThing {
 }
 
 fn main() -> Result<(), anyhow::Error> {
-    let thing = TestThing { a: 0, b: 1, c: 2 };
+    let _thing = TestThing { a: 0, b: 1, c: 2 };
 
     let args = Args::parse();
 
@@ -62,12 +63,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut units = dwarf.debug_info.units();
 
-    loop {
-        let unit = match units.next()? {
-            Some(unit) => unit,
-            None => break,
-        };
-
+    while let Some(unit) = units.next()? {
         let abbreviations = unit.abbreviations(&dwarf.debug_abbrev)?;
 
         let mut entries = unit.entries(&abbreviations);
@@ -193,7 +189,7 @@ fn get_structure_type_data<R: Reader>(
             continue;
         }
 
-        let member_name = read_entry_name_attr(&child_entry, dwarf, unit)?.unwrap();
+        let member_name = read_entry_name_attr(child_entry, dwarf, unit)?.unwrap();
 
         let member_location = child_entry
             .attr_value(gimli::constants::DW_AT_data_member_location)?
@@ -237,7 +233,8 @@ fn get_pointer_type_data<R: Reader>(
     dwarf: &Dwarf<R>,
     unit: &UnitHeader<R>,
 ) -> Result<TypeData, anyhow::Error> {
-    let name = read_entry_name_attr(entry, dwarf, unit)?.unwrap();
+    let name =
+        read_entry_name_attr(entry, dwarf, unit)?.unwrap_or_else(|| "Unknown pointer".into());
 
     Ok(TypeData {
         name,
@@ -288,7 +285,10 @@ impl TypeData {
         let mut cells = Vec::new();
 
         let mut name = self.name.clone();
-        name.insert_str(0,  String::from_iter((0..name_indent).map(|_| "- ")).as_str());
+        name.insert_str(
+            0,
+            String::from_iter((0..name_indent).map(|_| "- ")).as_str(),
+        );
 
         cells.push(Cell::new(name));
 
@@ -314,9 +314,10 @@ impl TypeData {
         ];
         static NEXT_COLOR: AtomicUsize = AtomicUsize::new(0);
 
-        rows.push(
-            self.get_table_row(COLORS[NEXT_COLOR.fetch_add(1, Ordering::SeqCst) % COLORS.len()], depth),
-        );
+        rows.push(self.get_table_row(
+            COLORS[NEXT_COLOR.fetch_add(1, Ordering::SeqCst) % COLORS.len()],
+            depth,
+        ));
 
         for member in self.members.iter() {
             member.get_table_rows_recursive(rows, depth + 1);
@@ -334,10 +335,13 @@ impl TypeData {
         self.get_table_rows_recursive(&mut rows, 0);
 
         for row in rows {
-            table.add_body_row(
-                row.iter()
-                    .map(|c| if c.content() == " " { "X".to_string() } else { c.content() }),
-            );
+            table.add_body_row(row.iter().map(|c| {
+                if c.content() == " " {
+                    "X".to_string()
+                } else {
+                    c.content()
+                }
+            }));
         }
 
         table
