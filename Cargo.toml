@@ -1,0 +1,23 @@
+[package]
+name = "type-dissect"
+version = "0.1.0"
+edition = "2021"
+authors = ["Dion Dokter <diondokter@gmail.com>"]
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.58"
+build_html = "2.1.0"
+chrono = "0.4.19"
+clap = { version = "3.2.12", features = ["derive"] }
+comfy-table = "6.0.0"
+fern = "0.6.1"
+gimli = "0.26.1"
+log = "0.4.17"
+object = "0.29.0"
+web-view = "0.7.3"
+
+[profile.release]
+debug = true
